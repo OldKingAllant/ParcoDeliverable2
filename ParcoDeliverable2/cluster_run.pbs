@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#PBS -N mpi_matrix_transpose
+#PBS -o bench.txt
+#PBS -q short_cpuQ
+#PBS -l walltime=0:10:00
+#PBS -l select=1:ncpus=8:mpiprocs=8
+
+module load cmake-3.15.4
+module load openmpi-4.0.4
+module load make-4.3
+
+cd ~
+
+if [ ! -d "claudio_vozza_d2" ]; then
+   echo "Missing deliverable directory"
+   echo "Clone the repository to claudio_vozza_d2"
+   exit 0
+fi
+
+cd claudio_vozza_d2/ParcoDeliverable2
+
+cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" .
+make
+
+cd ./ParcoDeliverable2
+
+#change here the number of elements and processes
+all_n_elements=(16 32 64 128 256 512 1024 2048 4096)
+all_n_procs=(1 2 4 8)
+
+for num_proc in "${all_n_procs[@]}"; do
+  for n_elem in "${all_n_elements[@]}"; do
+    mpirun -np $num_proc ./ParcoDeliverable2 $n_elem
+  done
+done
+
