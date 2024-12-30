@@ -76,7 +76,7 @@ and run the executable as you would do locally
 # Compile flags explanation
 
 - Wall Shows all warnings (excluding pedantic)
-- O3 Since we want and max. optimizations when compiling (while
+- O3 Since we want max. optimizations when compiling (while
   producing stable and more or less machine-independent code)
 - flto Used to perform link-time optimization (which should allow
   function inlining across multiple translation units)
