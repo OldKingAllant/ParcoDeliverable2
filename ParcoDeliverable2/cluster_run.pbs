@@ -2,6 +2,7 @@
 
 #PBS -N mpi_matrix_transpose
 #PBS -o bench.txt
+#PBS -e errors.txt
 #PBS -q short_cpuQ
 #PBS -l walltime=0:10:00
 #PBS -l select=1:ncpus=8:mpiprocs=8
