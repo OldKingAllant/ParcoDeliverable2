@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 #include "Bench.h"
 #include "Utils.hpp"
@@ -22,18 +23,23 @@ int main(int argc, char* argv[])
 
 	u32 N{ CONST_N };
 
+	std::string work_dir{};
+
 	if (argc > 1) {
 		N = StringToU32(argv[1], N);
-		//std::cout << N << std::endl;
+		
+		if (argc > 2) {
+			work_dir = std::string(argv[2]);
+		}
 	}
 
 	if ((world_size & (world_size - 1)) && curr_rank == 0) {
-		std::cout << "Expected comm size as a power of two!" << std::endl;
+		std::cerr << "Expected comm size as a power of two!" << std::endl;
 		std::exit(0);
 	}
 
 	if (world_size > int(N) && curr_rank == 0) {
-		std::cout << "Too many processes" << std::endl;
+		std::cerr << "Too many processes" << std::endl;
 		std::exit(0);
 	}
 
@@ -43,6 +49,7 @@ int main(int argc, char* argv[])
 		std::stringstream file_name_builder{};
 
 		file_name_builder <<
+			work_dir <<
 			"bench_" <<
 			world_size <<
 			"_" <<

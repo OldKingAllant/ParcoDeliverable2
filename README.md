@@ -7,6 +7,10 @@ mkdir -p claudio_vozza_d2 && cd claudio_vozza_d2
 git clone https://github.com/OldKingAllant/ParcoDeliverable2.git
 ````
 
+N.B.! The rest of the guide assumes that you put the 
+'claudio_vozza_d2' folder in the root of your home
+directory
+
 # Rules for running 
 
 The code expects:
@@ -37,8 +41,11 @@ make
 Now you can run locally (from claudio_vozza_d2/ParcoDeliverable2):
 ````
 cd ParcoDeliverable2
-mpirun -np <num_processes> ./ParcoDeliverable2 <num_elements>
+mpirun -np <num_processes> ./ParcoDeliverable2 <num_elements> [result directory]
 ````
+
+If the 'result directory' is omitted, the benchmarks will
+be stored in the executable's directory
 
 # Compile and run on the cluster
 
@@ -57,7 +64,8 @@ respecting the rules stated in the second section)
 From the root of your home dir:
 
 ````
-cd claudio_vozza_d2/ParcoDeliverable2/ParcoDeliverable2
+cd claudio_vozza_d2/ParcoDeliverable2
+mkdir run && cd run
 qsub cluster_run.pbs
 ````
 

@@ -11,6 +11,8 @@ module load cmake-3.15.4
 module load openmpi-4.0.4
 module load make-4.3
 
+work_dir=$(pwd)
+
 cd ~
 
 if [ ! -d "claudio_vozza_d2" ]; then
@@ -32,7 +34,7 @@ all_n_procs=(1 2 4 8)
 
 for num_proc in "${all_n_procs[@]}"; do
   for n_elem in "${all_n_elements[@]}"; do
-    mpirun -np $num_proc ./ParcoDeliverable2 $n_elem
+    mpirun -np $num_proc ./ParcoDeliverable2 $n_elem $work_dir
   done
 done
 
