@@ -66,7 +66,7 @@ From the root of your home dir:
 ````
 cd claudio_vozza_d2/ParcoDeliverable2
 mkdir run && cd run
-qsub ../ParcoDeliverable2/cluster_run.pbs $(pwd)
+qsub -v "out_dir=$(pwd)" ../ParcoDeliverable2/cluster_run.pbs
 ````
 
 Wait at most 10 minutes before checking the results, 
