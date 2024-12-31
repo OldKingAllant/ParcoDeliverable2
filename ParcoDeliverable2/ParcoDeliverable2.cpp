@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
 		file_name_builder <<
 			work_dir <<
-			"bench_" <<
+			"/bench_" <<
 			world_size <<
 			"_" <<
 			N <<
