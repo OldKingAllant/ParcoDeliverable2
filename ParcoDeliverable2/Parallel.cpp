@@ -6,6 +6,11 @@
 #include <immintrin.h>
 #include <cmath>
 
+#ifdef ENABLE_OMP
+#include <omp.h>
+#endif // ENABLE_OMP
+
+
 #include "Utils.hpp"
 
 void matTransposeMPI_TYPE(const MatType* M, MatType* T, u32 N, int comm_size, int root) {
@@ -172,6 +177,9 @@ void matTransposeMPI_BLOCK(const MatType* M, MatType* T, u32 N, int comm_size, i
 	//Tile size for transposition
 	const u32 BLOCK_SIZE = 16;
 
+#ifdef ENABLE_OMP
+#pragma omp parallel for
+#endif // ENABLE_OMP
 	for (u32 row = START; row < END; row += BLOCK_SIZE) {
 		for (u32 col = 0; col < N; col += BLOCK_SIZE) {
 
@@ -333,7 +341,9 @@ bool checkSymMPI(const MatType* M, u32 N, int comm_size, int root) {
 	bool is_symm_final = false;
 
 	//Perform tiled
-
+#ifdef ENABLE_OMP
+#pragma omp parallel for
+#endif // ENABLE_OMP
 	for (u32 row = START; row < END; row += BLOCK_SIZE) {
 		for (u32 col = row + 1; col < N; col += BLOCK_SIZE) {
 
