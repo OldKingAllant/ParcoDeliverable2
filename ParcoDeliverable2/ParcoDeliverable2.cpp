@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 
 	u32 N{ CONST_N };
 
-	std::string work_dir{};
+	std::string work_dir{"./"};
 
 	if (argc > 1) {
 		N = StringToU32(argv[1], N);
@@ -88,11 +88,11 @@ int main(int argc, char* argv[])
 	MatType* transposed3{ new MatType[TOT_SIZE]{} };
 	MatType* transposed4{ new MatType[TOT_SIZE]{} };
 
-	Benchmark([=]() { matTransposeMPI_TYPE(base_matrix, transposed1, N, world_size, 0); },
+	/*Benchmark([=]() { matTransposeMPI_TYPE(base_matrix, transposed1, N, world_size, 0); },
 		"MPI Column transpose", 10, out, curr_rank, 0);
 
 	if(curr_rank == 0 && !checkTranspose(base_matrix, transposed1, N))
-		std::cout << "MPI Column Transposition failed" << std::endl;
+		std::cout << "MPI Column Transposition failed" << std::endl;*/
 
 	Benchmark([=]() { matTransposeMPI_BLOCK(base_matrix, transposed2, N, world_size, 0); },
 		"MPI Block transpose", 10, out, curr_rank, 0);

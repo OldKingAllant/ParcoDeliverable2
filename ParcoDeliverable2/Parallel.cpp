@@ -6,11 +6,6 @@
 #include <immintrin.h>
 #include <cmath>
 
-#ifdef ENABLE_OMP
-#include <omp.h>
-#endif // ENABLE_OMP
-
-
 #include "Utils.hpp"
 
 void matTransposeMPI_TYPE(const MatType* M, MatType* T, u32 N, int comm_size, int root) {
@@ -177,9 +172,6 @@ void matTransposeMPI_BLOCK(const MatType* M, MatType* T, u32 N, int comm_size, i
 	//Tile size for transposition
 	const u32 BLOCK_SIZE = 16;
 
-#ifdef ENABLE_OMP
-#pragma omp parallel for
-#endif // ENABLE_OMP
 	for (u32 row = START; row < END; row += BLOCK_SIZE) {
 		for (u32 col = 0; col < N; col += BLOCK_SIZE) {
 
@@ -269,107 +261,6 @@ void ObliviousTransposeImpl(MatType const* M, MatType* T, uint32_t N,
 			}
 		}
 	}
-}
-
-/*void matTransposeMPI_OBLIVIOUS(const MatType* M, MatType* T, u32 N, int comm_size, int root) {
-	MatType* temp{ new MatType[N * N]{} };
-	const u32 ROWS_PROC = N / comm_size;
-
-	int rank{};
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-	Most of the algorithm but the
-	transposition of each block is
-	performed the same way as the
-	previous implementation
-
-	if (rank == root) {
-		MPI_Bcast((void*)M, N * N, MPI_FLOAT, root, MPI_COMM_WORLD);
-	}
-	else {
-		MPI_Bcast((void*)T, N * N, MPI_FLOAT, root, MPI_COMM_WORLD);
-	}
-
-	const MatType* src_mat = (rank == root) ? M : T;
-	const u32 START = rank * ROWS_PROC;
-
-	const u32 NUM_COL_BLOCKS{ u32(comm_size) };
-
-	//Divide in square sub-matrices and transpose one at a time
-	//using oblivious transposition
-	for (u32 curr_block = 0; curr_block < NUM_COL_BLOCKS; curr_block++) {
-		ObliviousTransposeImpl(src_mat, temp, N, ROWS_PROC,
-			curr_block * ROWS_PROC, START);
-	}
-
-	const u32 NUM_ELEMENTS = ROWS_PROC * N;
-	const u32 OFFSET = NUM_ELEMENTS * rank;
-
-	MPI_Gather((void*)(temp + OFFSET), NUM_ELEMENTS, MPI_FLOAT, (void*)T,
-		NUM_ELEMENTS, MPI_FLOAT, root, MPI_COMM_WORLD);
-
-
-	delete[] temp;
-}*/
-
-bool checkSymMPI(const MatType* M, u32 N, int comm_size, int root) {
-	MatType* temp{ new MatType[N * N]{} };
-	const u32 ROWS_PROC = N / comm_size;
-
-	int rank{};
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-	//Matrix distribution is the same as the two algorithms
-	//above
-
-	if (rank == root) {
-		MPI_Bcast((void*)M, N * N, MPI_FLOAT, root, MPI_COMM_WORLD);
-	}
-	else {
-		MPI_Bcast((void*)temp, N * N, MPI_FLOAT, root, MPI_COMM_WORLD);
-	}
-
-	const MatType* src_mat = (rank == root) ? M : temp;
-	const u32 START = rank * ROWS_PROC;
-	const u32 END = START + ROWS_PROC;
-
-	const u32 BLOCK_SIZE = 16;
-
-	//Per-process variable
-	bool is_symm = true;
-	//Global result
-	bool is_symm_final = false;
-
-	//Perform tiled
-#ifdef ENABLE_OMP
-#pragma omp parallel for
-#endif // ENABLE_OMP
-	for (u32 row = START; row < END; row += BLOCK_SIZE) {
-		for (u32 col = row + 1; col < N; col += BLOCK_SIZE) {
-
-			u32 row_limit = std::min(row + BLOCK_SIZE, END);
-			u32 col_limit = std::min(col + BLOCK_SIZE, N);
-
-			for (u32 block_row = row; block_row < row_limit; block_row++) {
-				for (u32 block_col = col; block_col < col_limit; block_col++) {
-					//Here we are using & to force the compiler
-					//to produce code that always reads from the matrix,
-					//irrespective of the value of is_symm
-					is_symm = bool(u32(is_symm) &
-						u32(src_mat[block_row * N + block_col] 
-							== src_mat[block_col * N + block_row]));
-				}
-			}
-
-		}
-	}
-
-	//Use reduce with logical and, the result is true
-	//only if all blocks have been verified as symmetric
-	MPI_Reduce((void*)&is_symm, (void*)&is_symm_final, 1,
-		MPI_C_BOOL, MPI_LAND, root, MPI_COMM_WORLD);
-
-	return is_symm_final;
 }
 
 /// <summary>
@@ -603,6 +494,114 @@ bool checkBlockSymmetry(const MatType* M, const MatType* T, u32 N, u32 row_offse
 	}
 
 	return is_mirror;
+}
+
+bool checkSymMPI(const MatType* M, u32 N, int comm_size, int root) {
+	u32 inflated_comm_size{ u32(comm_size) };
+	//Make sure that comm_size is a power of two with integer
+	//square root
+	if (u32(ceil(sqrt(inflated_comm_size))) != u32(sqrt(inflated_comm_size))) {
+		//Given 2^x, if x is odd, sqrt is not integer
+		//Get the number as 2^2x
+		inflated_comm_size <<= 1;
+	}
+
+	if (inflated_comm_size > N) {
+		bool is_symm = true;
+
+		for (u32 row = 0; row < N; row++) {
+			for (u32 col = row + 1; col < N; col++) {
+				is_symm = bool(u32(is_symm) & u32(M[row * N + col] == M[col * N + row]));
+			}
+		}
+
+		return is_symm;
+	}
+
+	const u32 NUM_SIDE_BLOCKS{ u32(ceil(sqrt(inflated_comm_size))) };
+	const u32 ROWS_PROC{ N / NUM_SIDE_BLOCKS };
+	const u32 BLOCK_SIZE{ ROWS_PROC * ROWS_PROC };
+
+	MatType* block_1{ new MatType[BLOCK_SIZE]{} };
+	MatType* block_2{ new MatType[BLOCK_SIZE]{} };
+
+	int rank{};
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	MPI_Datatype block{}, temp{};
+
+	MPI_Type_vector(ROWS_PROC, ROWS_PROC, N, MPI_FLOAT, &temp);
+	MPI_Type_create_resized(temp, 0, sizeof(MatType), &block);
+	MPI_Type_commit(&block);
+
+	int* counts{ new int[NUM_SIDE_BLOCKS * NUM_SIDE_BLOCKS] {} };
+	int* above_displs{ new int[NUM_SIDE_BLOCKS * NUM_SIDE_BLOCKS] {} };
+	int* below_displs{ new int[NUM_SIDE_BLOCKS * NUM_SIDE_BLOCKS] {} };
+
+	//used to limit the effective number of blocks
+	//we need to send to each process
+	u32 num_blocks_to_send{ 0 };
+
+	for (u32 row_block = 0; row_block < NUM_SIDE_BLOCKS; row_block++) {
+		for (u32 col_block = row_block; col_block < NUM_SIDE_BLOCKS; col_block++) {
+			counts[num_blocks_to_send] = 1;
+			//position of blocks above the diagonal
+			above_displs[num_blocks_to_send] =
+				(row_block * ROWS_PROC * N) + (col_block * ROWS_PROC);
+			//position of transposed blocks
+			below_displs[num_blocks_to_send] =
+				(col_block * ROWS_PROC * N) + (row_block * ROWS_PROC);
+
+			num_blocks_to_send += 1;
+		}
+	}
+
+	//used to accumulate on only one process
+	bool is_symm{ true };
+
+	for (u32 curr_block_num = 0; curr_block_num < num_blocks_to_send; curr_block_num += 
+		u32(comm_size)) {
+		//check if the current process has any work to do
+		u32 recv_count{ counts[curr_block_num + u32(rank)] > 0 ? BLOCK_SIZE : 0 };
+
+		//scatter blocks above the diagonal (diagonal included)
+		MPI_Scatterv((void*)M, counts + curr_block_num, 
+			above_displs + curr_block_num, block, (void*)block_1,
+			recv_count, MPI_FLOAT, root, MPI_COMM_WORLD);
+
+		//scatter transposed blocks (diagonal included)
+		MPI_Scatterv((void*)M, counts + curr_block_num,
+			below_displs + curr_block_num, block, (void*)block_2,
+			recv_count, MPI_FLOAT, root, MPI_COMM_WORLD);
+
+		bool is_symm_temp{ true };
+
+		//if the current process has received the two blocks,
+		//check if they are mirrors of each other
+		if (counts[curr_block_num + u32(rank)] > 0) {
+			is_symm_temp = checkBlockSymmetry(block_1, block_2, ROWS_PROC,
+				ROWS_PROC);
+		}
+
+		is_symm = is_symm && is_symm_temp;
+	}
+
+	delete[] block_1;
+	delete[] block_2;
+
+	delete[] counts;
+	delete[] above_displs;
+	delete[] below_displs;
+
+	MPI_Type_free(&temp);
+	MPI_Type_free(&block);
+
+	bool is_symm_final{ false };
+
+	MPI_Reduce((void*)&is_symm, (void*)&is_symm_final, 1,
+		MPI_C_BOOL, MPI_LAND, root, MPI_COMM_WORLD);
+
+	return is_symm_final;
 }
 
 bool checkSymMPI_DISTRIBUTED(const MatType* M, u32 N, int comm_size, int root) {
