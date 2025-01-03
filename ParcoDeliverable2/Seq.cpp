@@ -5,8 +5,11 @@ bool checkSym(const MatType* M, u32 N) {
 
 	for (u32 row = 0; row < N; row++) {
 		for (u32 col = row + 1; col < N; col++) {
-			//force the compiler to read all elements using a bitand
-			is_symm = bool(u32(is_symm) & u32(M[row * N + col] == M[col * N + row]));
+			
+			if (M[row * N + col] != M[col * N + row]) {
+				is_symm = false;
+			}
+
 		}
 	}
 

@@ -79,7 +79,12 @@ interesting things).
 Still, if you want to run the test for exactly N processes
 and M elements, you should go in the directory 
 claudio_vozza_d2/ParcoDeliverable2/ParcoDeliverable2
-and run the executable as you would do locally
+and run the executable as you would do locally.
+However, to do this, you should first run an interactive job:
+````
+qsub -I -q short_cpuQ -l select=1:ncpus=<max_cpus>:mpiprocs=<max_procs>
+````
+And run the executable from inside that job
 
 # Compile flags explanation
 

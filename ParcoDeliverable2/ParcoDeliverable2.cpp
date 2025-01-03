@@ -150,6 +150,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	bool is_symm2 = Benchmark([=]() { return checkSymMPI(symm1, N, world_size, 0); },
 		"MPI symm", 10, out, curr_rank, 0);
 
