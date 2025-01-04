@@ -1,5 +1,17 @@
 # Deliverable 2 for Parallel Computing at UniTn for year 24/25
 
+# Objective
+
+During the course, we studied MPI and how to use it to 
+parallelize algorithms on distributed-memory systems.
+
+As such, in this project I am trying to implement different
+algorithms for matrix transposition and checking whether a
+matrix is symmetric or not, by using MPI. After that, 
+I want to compare the performance of these implementations
+against the sequential naive implementation of those
+two algorithms.
+
 # Obtaining the code
 
 ````
@@ -16,6 +28,7 @@ directory
 The code expects:
 - The number of elements to be a power of two
 - The number of MPI processes to be a power of two
+- The number of elements should be greater than the number of processes
 
 # Compile and run locally
 
@@ -117,3 +130,79 @@ script, but I will still write them out:
 
 If you still want to load them manually, use
 module load <name> for all of them
+
+# How to interpret results
+
+Example run:
+````
+mpirun -np 8 ./ParcoDeliverable2 4096
+````
+
+This will create a file called 'bench_8_4096.txt' 
+inside the executable's directory.
+So, the name format of the output file 
+is bench_<procs>_<elems>.txt. 
+
+The file will contain something like this:
+````
+270.885
+135.471
+44.6778
+8.06175
+97.1259
+37.3783
+11.7023
+````
+
+Each line corresponds to the time taken for
+each algorithm to complete (more precisely, the average
+time of 10 runs). 
+The first 4 lines are used by the transposition
+algs., while the remaining 3 are
+the symmetry checks. 
+
+To generate graphs, a python script is provided, which uses 
+matplotlib (check if this dependency is installed beforehand).
+
+Example run
+````
+python graphs.py 8 "1,2,4,8" "16,32,64,128,256,512,1024,2048,4096" ./bench_dir ./out_dir
+````
+
+In general, the structure of the arguments is:
+````
+python graphs.py <compare_procs> <list_procs> <list_elems> <input_dir> [out_dir]
+````
+
+- compare_procs: Number of processes to uses when comparint each algorithm to baseline
+- list_procs: List of number of processes used for each benchmark
+- list_elems: List of number of elements for each benchmark
+- input_dir: Input directory where the 'bench_<procs>_<elems>.txt' reside
+- out_dir: Optional output directory for the graphs (default is ./ when omitted)
+
+In the output directory you will find 7 images which contain the graphs.
+
+The two called 
+- compare_symm_fixed_procs.png
+- compare_transpose_fixed_procs.png
+
+Represent the performance of the MPI algorithms wrt the baseline and the
+other MPI implementations (for the given number of processes)
+
+The remaining graphs compare the performance
+scaling of each MPI algorithm when changing
+the number of processes and the number of elements
+
+# General code structure
+- CMakeLists.txt: top level cmake script, not interesting
+- graphs.py: Python script used to generate performance graphs
+
+Files in ParcoDeliverable2:
+- Bench.h: File with functions for benchmarking
+- CMakeLists.txt: Real cmake script which configures compilation
+- Defs.hpp: Global definitions
+- Parallel.hpp/cpp: Contains MPI algorithms
+- ParcoDeliverable2.hpp/cpp: Contains main function which orchestrates the execution
+- Seq.hpp/cpp: Contains sequential algorithms
+- Utils.hpp/cpp: Useful functions (like matrix init.)
+- cluster_run.pbs: Script used to run the job on the cluster
