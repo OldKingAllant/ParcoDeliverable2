@@ -88,6 +88,16 @@ And run the executable from inside that job
 
 # Compile flags explanation
 
+Example command line used when compiling a single source file:
+````
+g++ -O3 -DNDEBUG   -Wall -msse4.1 -std=gnu++11 -o <object> -c <.cpp>
+````
+
+When linking:
+````
+g++  -O3 -DNDEBUG  -flto <list of object files> -o ParcoDeliverable2 -lmpi -lmpi_cxx
+````
+
 - Wall Shows all warnings (excluding pedantic)
 - O3 Since we want max. optimizations when compiling (while
   producing stable and more or less machine-independent code)
