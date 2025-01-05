@@ -141,7 +141,7 @@ mpirun -np 8 ./ParcoDeliverable2 4096
 This will create a file called 'bench_8_4096.txt' 
 inside the executable's directory.
 So, the name format of the output file 
-is bench_<procs>_<elems>.txt. 
+is bench_nprocs_nelems.txt. 
 
 The file will contain something like this:
 ````
@@ -177,7 +177,7 @@ python graphs.py <compare_procs> <list_procs> <list_elems> <input_dir> [out_dir]
 - compare_procs: Number of processes to uses when comparint each algorithm to baseline
 - list_procs: List of number of processes used for each benchmark
 - list_elems: List of number of elements for each benchmark
-- input_dir: Input directory where the 'bench_<procs>_<elems>.txt' reside
+- input_dir: Input directory where the 'bench_nprocs_nelems.txt' reside
 - out_dir: Optional output directory for the graphs (default is ./ when omitted)
 
 In the output directory you will find 7 images which contain the graphs.
